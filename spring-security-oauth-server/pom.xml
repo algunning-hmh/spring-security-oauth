@@ -18,7 +18,7 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- jdbc token store
+        <!-- jdbc token store -->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-jdbc</artifactId>
@@ -29,7 +29,6 @@
             <artifactId>mysql-connector-java</artifactId>
             <scope>runtime</scope>
         </dependency> 
-        -->
 
         <!-- oauth -->
         <dependency>

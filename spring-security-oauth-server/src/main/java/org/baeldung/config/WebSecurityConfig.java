@@ -13,10 +13,27 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
     public void globalUserDetails(final AuthenticationManagerBuilder auth) throws Exception {
-        // @formatter:off
-		auth.inMemoryAuthentication().withUser("john").password("123").roles("USER").and().withUser("tom")
-				.password("111").roles("ADMIN");
-		// @formatter:on
+
+        //TODO: see if can read this from database?
+        //TODO: Add to a repository since it's largely working now so don't mess it up.
+/*        auth
+                .jdbcAuthentication()
+                .dataSource(restDataSource)
+                .usersByUsernameQuery(getUserQuery())
+                .authoritiesByUsernameQuery(getAuthoritiesQuery());
+               //TODO: see
+               https://dzone.com/articles/spring-security-4-authenticate-and-authorize-users
+               http://stackoverflow.com/questions/22749767/using-jdbcauthentication-in-spring-security-with-hibernate
+*/
+
+        auth.inMemoryAuthentication()
+                .withUser("john")
+                .password("123")
+                .roles("USER")
+
+                .and().withUser("tom")
+                .password("111")
+                .roles("ADMIN");
     }
 
     @Override
@@ -27,10 +44,13 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Override
     protected void configure(final HttpSecurity http) throws Exception {
-        // @formatter:off
-		http.authorizeRequests().antMatchers("/login").permitAll().anyRequest().authenticated().and().formLogin()
-				.permitAll();
-		// @formatter:on
+        http.authorizeRequests()
+                .antMatchers("/login").permitAll()
+                .anyRequest().authenticated()
+
+                // TODO: Not necessary for password flow, only needed for implicit flow
+                .and()
+                .formLogin().permitAll();
     }
 
 }
