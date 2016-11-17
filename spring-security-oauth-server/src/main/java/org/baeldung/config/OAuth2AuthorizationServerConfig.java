@@ -22,6 +22,8 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.A
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.code.AuthorizationCodeServices;
+import org.springframework.security.oauth2.provider.code.JdbcAuthorizationCodeServices;
 import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
 import org.springframework.security.oauth2.provider.token.TokenEnhancer;
 import org.springframework.security.oauth2.provider.token.TokenEnhancerChain;
@@ -51,15 +53,30 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
 
     @Override
     public void configure(final AuthorizationServerSecurityConfigurer oauthServer) throws Exception {
+        /*
+         *  AuthorizationServerSecurityConfigurer: defines the security constraints on the token endpoint.
+         */
         oauthServer
                 .tokenKeyAccess("permitAll()")
                 .checkTokenAccess("isAuthenticated()");
     }
 
+
     @Override
     public void configure(final ClientDetailsServiceConfigurer clients) throws Exception {// @formatter:off
-        clients
-                .jdbc(dataSource())
+        /*
+         *  The ClientDetailsServiceConfigurer (a callback from your AuthorizationServerConfigurer)
+         *  can be used to define an in-memory or JDBC implementation of the client details service.
+         *
+         *  Important attributes of a client are
+         *  clientId: (required) the client id.
+         *  secret: (required for trusted clients) the client secret, if any.
+         *  scope: The scope to which the client is limited. If scope is undefined or empty (the default) the client is not limited by scope.
+         *  authorizedGrantTypes: Grant types that are authorized for the client to use. Default value is empty.
+         *  authorities: Authorities that are granted to the client (regular Spring Security authorities).
+         *  */
+
+        clients.jdbc(dataSource())
 
                 // Sample Client with Implicit flow
                 .withClient("sampleClientId")
@@ -88,21 +105,59 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
 
     @Override
     public void configure(final AuthorizationServerEndpointsConfigurer endpoints) throws Exception {
-        // @formatter:off
-		//final TokenEnhancerChain tokenEnhancerChain = new TokenEnhancerChain();
-		//tokenEnhancerChain.setTokenEnhancers(Arrays.asList(tokenEnhancer(), accessTokenConverter()));
+        /*
+         *   AuthorizationServerEndpointsConfigurer: defines the authorization and token endpoints and the token services.
+         *
+         *  Grant Types:
+         *
+         *  authenticationManager: By default all grant types are supported except password,
+         *                         password grants are switched on by injecting an AuthenticationManager.
+         *
+         *  userDetailsService: if you inject a UserDetailsService or if one is configured globally anyway
+         *                      (e.g. in a GlobalAuthenticationManagerConfigurer) then a refresh token grant will contain
+         *                      a check on the user details, to ensure that the account is still active
+         *
+         *  authorizationCodeServices: defines the authorization code services (instance of AuthorizationCodeServices)
+         *                              for the auth code grant.
+         *
+         *  implicitGrantService: manages state during the implicit grant.
+         *
+         *  tokenGranter: the TokenGranter (taking full control of the granting and ignoring the other properties above)
+         */
+
+//		final TokenEnhancerChain tokenEnhancerChain = new TokenEnhancerChain();
+//		tokenEnhancerChain.setTokenEnhancers(Arrays.asList(tokenEnhancer(), accessTokenConverter()));
+ //       tokenEnhancerChain.setTokenEnhancers(Arrays.asList(tokenEnhancer()));
 		endpoints
                 .tokenStore(tokenStore())
 				// .accessTokenConverter(accessTokenConverter())
-				//.tokenEnhancer(tokenEnhancerChain)
+//				.tokenEnhancer(tokenEnhancerChain)
+                .tokenEnhancer(tokenEnhancer())
+
+                    // Services for issuing and storing authorization codes
+                // .authorizationCodeServices(authorizationCodeServices())
+
                 .authenticationManager(authenticationManager);
-		// @formatter:on
     }
 
     @Bean
     public TokenStore tokenStore() {
         // return new JwtTokenStore(accessTokenConverter());
         return new JdbcTokenStore(dataSource());
+    }
+
+    @Bean
+    protected AuthorizationCodeServices authorizationCodeServices() {
+        return new JdbcAuthorizationCodeServices(dataSource());
+    }
+
+    @Bean
+    @Primary
+    public DefaultTokenServices tokenServices() {
+        final DefaultTokenServices defaultTokenServices = new DefaultTokenServices();
+        defaultTokenServices.setTokenStore(tokenStore());
+        defaultTokenServices.setSupportRefreshToken(true);
+        return defaultTokenServices;
     }
 
     @Bean
@@ -113,15 +168,6 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
         converter.setKeyPair(keyStoreKeyFactory.getKeyPair("mytest"));
         converter.setKeyPair(keyStoreKeyFactory.getKeyPair("mytest"));
         return converter;
-    }
-
-    @Bean
-    @Primary
-    public DefaultTokenServices tokenServices() {
-        final DefaultTokenServices defaultTokenServices = new DefaultTokenServices();
-        defaultTokenServices.setTokenStore(tokenStore());
-        defaultTokenServices.setSupportRefreshToken(true);
-        return defaultTokenServices;
     }
 
     @Bean
@@ -140,7 +186,7 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
 
     private DatabasePopulator databasePopulator() {
         final ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
-        populator.addScript(schemaScript);
+        populator.addScripts(schemaScript);
         return populator;
     }
 
@@ -153,4 +199,5 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
         dataSource.setPassword(env.getProperty("jdbc.pass"));
         return dataSource;
     }
+
 }

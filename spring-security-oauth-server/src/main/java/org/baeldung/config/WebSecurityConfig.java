@@ -7,25 +7,20 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import javax.sql.DataSource;
 
 @Configuration
 public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
     @Autowired
+    DataSource dataSource;
+
+    /*
+    @Autowired
     public void globalUserDetails(final AuthenticationManagerBuilder auth) throws Exception {
-
-        //TODO: see if can read this from database?
-        //TODO: Add to a repository since it's largely working now so don't mess it up.
-/*        auth
-                .jdbcAuthentication()
-                .dataSource(restDataSource)
-                .usersByUsernameQuery(getUserQuery())
-                .authoritiesByUsernameQuery(getAuthoritiesQuery());
-               //TODO: see
-               https://dzone.com/articles/spring-security-4-authenticate-and-authorize-users
-               http://stackoverflow.com/questions/22749767/using-jdbcauthentication-in-spring-security-with-hibernate
-*/
-
         auth.inMemoryAuthentication()
                 .withUser("john")
                 .password("123")
@@ -34,6 +29,23 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .and().withUser("tom")
                 .password("111")
                 .roles("ADMIN");
+    }
+*/
+
+
+    @Autowired
+    public void configureAuthentication(final AuthenticationManagerBuilder auth) throws Exception {
+        auth.jdbcAuthentication().dataSource(dataSource)
+                // easily add password hashing
+//                .passwordEncoder(passwordEncoder())
+                .usersByUsernameQuery("select username,password, enabled from users where username=?")
+                .authoritiesByUsernameQuery("select username, role from user_roles where username=?");
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder(){
+        PasswordEncoder encoder = new BCryptPasswordEncoder();
+        return encoder;
     }
 
     @Override
@@ -48,7 +60,7 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
                 .antMatchers("/login").permitAll()
                 .anyRequest().authenticated()
 
-                // TODO: Not necessary for password flow, only needed for implicit flow
+                // TODO: Not necessary for password flow, only needed for implicit flow / form login
                 .and()
                 .formLogin().permitAll();
     }
