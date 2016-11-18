@@ -4,6 +4,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.encoding.ShaPasswordEncoder;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter;
@@ -18,31 +21,37 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     DataSource dataSource;
 
-    /*
+/* Option 3 - custome UserDetailsService implementation
     @Autowired
-    public void globalUserDetails(final AuthenticationManagerBuilder auth) throws Exception {
-        auth.inMemoryAuthentication()
-                .withUser("john")
-                .password("123")
-                .roles("USER")
-
-                .and().withUser("tom")
-                .password("111")
-                .roles("ADMIN");
-    }
+    private UserService userService;
 */
-
-
     @Autowired
     public void configureAuthentication(final AuthenticationManagerBuilder auth) throws Exception {
-        auth.jdbcAuthentication().dataSource(dataSource)
+                // Option 1
+                auth.jdbcAuthentication().dataSource(dataSource)
                 .passwordEncoder(passwordEncoder())
-                .usersByUsernameQuery("select username,password, enabled from users where username=?")
-                .authoritiesByUsernameQuery("select username, role from user_roles where username=?");
+                .usersByUsernameQuery("SELECT username, password, enabled FROM users WHERE username = ?")
+                .authoritiesByUsernameQuery("SELECT username, role FROM user_roles WHERE username = ?");
+
+                // Option 2 : Custom AuthenticationProvider
+                //auth.authenticationProvider(authProvider);
+
+                // Option 3: use DaoAuthenticationProvider with your custom UserDetailsService implementation.
+               // auth.authenticationProvider(authenticationProvider());
     }
 
+/* Option 3 -
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        authenticationProvider.setPasswordEncoder(new ShaPasswordEncoder());
+        authenticationProvider.setUserDetailsService(userService);
+        return authenticationProvider;
+    }
+*/
     @Bean
     public PasswordEncoder passwordEncoder(){
+        // TODO: Choose best password encoder
         PasswordEncoder encoder = new BCryptPasswordEncoder();
         return encoder;
     }
