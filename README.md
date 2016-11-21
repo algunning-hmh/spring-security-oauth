@@ -14,8 +14,6 @@ mvn clean install
 - This project consists of 4 main sub-modules, each sub-module is a Spring Boot Application running on specific port
     - spring-security-oauth-server       (port = 8081)
     - spring-security-oauth-resource     (port = 8082)
-    - spring-security-oauth-ui-implicit  (port = 8083)
-    - spring-security-oauth-ui-password  (port = 8084)
 - To run the project, run both _spring-security-oauth-server_ and _spring-security-oauth-resource_ first - then run any of the UI modules
 
 - You can run any sub-module using command line: 
