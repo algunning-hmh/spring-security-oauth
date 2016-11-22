@@ -22,6 +22,8 @@ import org.springframework.security.oauth2.config.annotation.web.configuration.A
 import org.springframework.security.oauth2.config.annotation.web.configuration.EnableAuthorizationServer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerEndpointsConfigurer;
 import org.springframework.security.oauth2.config.annotation.web.configurers.AuthorizationServerSecurityConfigurer;
+import org.springframework.security.oauth2.provider.approval.ApprovalStore;
+import org.springframework.security.oauth2.provider.approval.JdbcApprovalStore;
 import org.springframework.security.oauth2.provider.code.AuthorizationCodeServices;
 import org.springframework.security.oauth2.provider.code.JdbcAuthorizationCodeServices;
 import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
@@ -82,8 +84,8 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
                 .withClient("sampleClientId")
                 .authorizedGrantTypes("implicit")
 				.scopes("read", "write", "foo", "bar")
-                .autoApprove(true)
                 .accessTokenValiditySeconds(3600)
+                .autoApprove(true)
 
                 // Sample Client, Password flow, custom scope foo
                 .and().withClient("fooClientIdPassword")
@@ -92,6 +94,7 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
                 .scopes("read", "write", "foo")
 				.accessTokenValiditySeconds(3600) // 1 hour
 				.refreshTokenValiditySeconds(2592000) // 30 days
+                .autoApprove(true) // Auto approve to skip additional authorise prompt
 
                 // Sample Client, Password flow, custom scope bar
 				.and().withClient("barClientIdPassword")
@@ -100,6 +103,7 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
                 .scopes("read", "write", "bar")
 				.accessTokenValiditySeconds(3600) // 1 hour
 				.refreshTokenValiditySeconds(2592000) // 30 days
+                .autoApprove(true)  // Auto approve to skip additional authorise prompt
 		;
 	} // @formatter:on
 
@@ -129,21 +133,39 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
 //		tokenEnhancerChain.setTokenEnhancers(Arrays.asList(tokenEnhancer(), accessTokenConverter()));
  //       tokenEnhancerChain.setTokenEnhancers(Arrays.asList(tokenEnhancer()));
 		endpoints
+                // Enable JDBC Token Store
                 .tokenStore(tokenStore())
-				// .accessTokenConverter(accessTokenConverter())
-//				.tokenEnhancer(tokenEnhancerChain)
+
+                // Disable Approval Store
+                //.approvalStoreDisabled()
+
+                // Enable JDBC Approval Store
+                .approvalStore(approvalStore())
+
+                // Set CustomTokenEnhancer
                 .tokenEnhancer(tokenEnhancer())
 
-                    // Services for issuing and storing authorization codes
-                // .authorizationCodeServices(authorizationCodeServices())
+                // Enable JDBC Authorisation code services
+                // for issuing and storing authorization codes
+                .authorizationCodeServices(authorizationCodeServices())
 
+                // Inject authenticationManager to enable Client Password Flow
                 .authenticationManager(authenticationManager);
     }
 
     @Bean
     public TokenStore tokenStore() {
-        // return new JwtTokenStore(accessTokenConverter());
         return new JdbcTokenStore(dataSource());
+    }
+
+    @Bean
+    public ApprovalStore approvalStore() {
+        return new JdbcApprovalStore(dataSource());
+    }
+
+    @Bean
+    public TokenEnhancer tokenEnhancer() {
+        return new CustomTokenEnhancer();
     }
 
     @Bean
@@ -160,20 +182,7 @@ public class OAuth2AuthorizationServerConfig extends AuthorizationServerConfigur
         return defaultTokenServices;
     }
 
-    @Bean
-    public JwtAccessTokenConverter accessTokenConverter() {
-        final JwtAccessTokenConverter converter = new JwtAccessTokenConverter();
-        // converter.setSigningKey("123");
-        final KeyStoreKeyFactory keyStoreKeyFactory = new KeyStoreKeyFactory(new ClassPathResource("mytest.jks"), "mypass".toCharArray());
-        converter.setKeyPair(keyStoreKeyFactory.getKeyPair("mytest"));
-        converter.setKeyPair(keyStoreKeyFactory.getKeyPair("mytest"));
-        return converter;
-    }
 
-    @Bean
-    public TokenEnhancer tokenEnhancer() {
-        return new CustomTokenEnhancer();
-    }
 
     // JDBC token store configuration
     @Bean

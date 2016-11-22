@@ -70,7 +70,10 @@ public class WebSecurityConfig extends WebSecurityConfigurerAdapter {
 
                 // TODO: Not necessary for password flow, only needed for implicit flow / form login
                 .and()
-                .formLogin().permitAll();
+                .formLogin().permitAll()
+
+                // Disable Csrf protection if only using non-browser clients
+               .and().csrf().disable();
     }
 
 }
